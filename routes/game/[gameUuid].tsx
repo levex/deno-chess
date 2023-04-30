@@ -1,19 +1,24 @@
 import { Handlers, PageProps } from "$fresh/server.ts";
 import { Head } from "$fresh/runtime.ts";
 
+const STARTING_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+
 export const handler: Handlers = {
   async GET(_, ctx) {
     const { gameUuid } = ctx.params;
-    const resp = await fetch(`/api/game?gameId=${gameUuid}`);
-    if (resp.status === 404) {
-      return ctx.render(null);
+    const kv = await Deno.openKv();
+    const gameState = await kv.get(["game", gameUuid]);
+    if (gameState.value === null) {
+      await kv.set(["game", gameUuid], { state: STARTING_FEN });
+      return ctx.render({ gameState: STARTING_FEN, gameUuid: gameUuid });
     }
-    const gameState = await resp.json();
-    return ctx.render({ gameState: gameState, gameUuid: gameUuid });
+    return ctx.render({ gameState: gameState.value.state, gameUuid: gameUuid });
   },
 };
 
-export default function Game({ gameState, gameUuid }: PageProps) {
+export default function Page({ data }: PageProps) {
+  let gameUuid = data.gameUuid ?? "ENOENT";
+  let gameState = data.gameState ?? "ENOENT";
   return (
     <>
       <Head>
@@ -26,9 +31,11 @@ export default function Game({ gameState, gameUuid }: PageProps) {
           alt="the fresh logo: a sliced lemon dripping with juice"
         />
         <p class="my-6">
-          {gameState}
+          Game UUID: {gameUuid}
         </p>
-        <Chessboard />
+        <p class="my-6">
+          Game State: {gameState}
+        </p>
       </div>
     </>
   );
