@@ -1,5 +1,4 @@
 import { Head } from "$fresh/runtime.ts";
-import Chess from "../islands/Chess.tsx";
 
 export default function Home() {
   return (
@@ -22,7 +21,6 @@ export default function Home() {
             New Game
           </button>
         </a>
-        <Chess />
       </div>
     </>
   );
