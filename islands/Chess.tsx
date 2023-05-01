@@ -1,30 +1,25 @@
-import { useState, useEffect } from "preact/hooks";
+import { useEffect, useState } from "preact/hooks";
 import Chessboard from "chessboardjsx";
 import { Chess, ShortMove } from "chess.js";
-
-function useBroadcastChannel(channelName, onMessage) {
-  const [channel, setChannel] = useState(null);
-
-  useEffect(() => {
-    const newChannel = new BroadcastChannel(channelName);
-    newChannel.onmessage = onMessage;
-    setChannel(newChannel);
-
-    return () => {
-      newChannel.close();
-    };
-  }, [channelName, onMessage]);
-
-  return channel;
-}
+import { server } from "../communication/server.ts";
 
 export default function ChessIsland(props) {
   const [chess, setChess] = useState(new Chess(props.fen));
   const [fen, setFen] = useState(chess.fen());
-  const gameChannel = useBroadcastChannel(`game-${props.gameUuid}`, (msg) => {
-    const newFen = msg.data;
-    setFen(newFen);
-    setChess(new Chess(newFen));
+
+  useEffect(() => {
+    const subscription = server.subscribeMessages(props.gameUuid, (msg) => {
+      console.log("NEW MSG", msg);
+      setFen(msg.fen);
+      chess.load(msg.fen);
+
+      // chessboardjsx is slightly broken - force a re-render.
+      this.forceUpdate();
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   });
 
   const myMove = (chess: Chess): boolean => {
@@ -45,13 +40,12 @@ export default function ChessIsland(props) {
         }),
       }).then(() => {
         setFen(newFen);
-        gameChannel.postMessage(newFen);
-      })
+        server.sendMessage(props.gameUuid, newFen);
+      });
     }
   };
 
   return (
-    <>
       <div>
         <Chessboard
           onDrop={(move: ShortMove) =>
@@ -65,6 +59,5 @@ export default function ChessIsland(props) {
           id="BasicBoard"
         />
       </div>
-    </>
   );
 }
