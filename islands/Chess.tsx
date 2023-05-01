@@ -3,12 +3,25 @@ import Chessboard from "chessboardjsx";
 import { Chess, ShortMove } from "chess.js";
 
 export default function ChessIsland(props) {
-  const [chess] = useState(new Chess(props.fen));
+  const [chess, setChess] = useState(new Chess(props.fen));
   const [fen, setFen] = useState(chess.fen());
 
+  const gameChannel = new BroadcastChannel(`game-${props.gameUuid}`);
+  gameChannel.onmessage = (msg) => {
+    const newFen = msg.data;
+    setFen(newFen);
+    setChess(new Chess(newFen));
+  };
+
+  const myMove = (chess: Chess): boolean => {
+    let currentTurn = chess.turn();
+    return (currentTurn == "b" && props.orientation == "black") ||
+      (currentTurn == "w" && props.orientation == "white");
+  };
+
   const handleMove = (move: ShortMove) => {
-    if (chess.move(move)) {
-      setFen(chess.fen());
+    if (myMove(chess) && chess.move(move)) {
+      let newFen = chess.fen();
 
       fetch("/api/game", {
         method: "POST",
@@ -16,7 +29,10 @@ export default function ChessIsland(props) {
           gameUuid: props.gameUuid,
           fen: chess.fen(),
         }),
-      });
+      }).then(() => {
+        setFen(newFen);
+        gameChannel.postMessage(newFen);
+      })
     }
   };
 
