@@ -13,9 +13,9 @@ export const handler: Handlers = {
     if (gameState.value === null) {
       await kv.set(["game", gameUuid], { state: STARTING_FEN });
 
-      let shareUrl = new URL(req.url);
-      let shareUrlSearch = shareUrl.searchParams;
-      shareUrl.searchParams.set(
+      const shareUrl = new URL(req.url);
+      const shareUrlSearch = shareUrl.searchParams;
+      shareUrlSearch.set(
         "color",
         color == "white" ? "black" : "white",
       );
@@ -40,7 +40,7 @@ export const handler: Handlers = {
 };
 
 export default function Page({ data }: PageProps) {
-  let { gameUuid, gameState, newGame, playerColor } = data;
+  const { gameUuid, gameState, newGame, playerColor } = data;
   return (
     <>
       <Head>
